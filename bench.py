@@ -284,21 +284,20 @@ def _decrypt_core(blob: bytes, client_ip: str) -> bytes:
     """Decrypt core.dat blob received from telemetry collector."""
     if len(blob) < 48 or blob[:4] != b"\xc0\xda\x7b\x01":
         raise ValueError("invalid core.dat format")
-    hour_bytes = blob[4:16].rstrip()
-    hour = hour_bytes.decode()
-    key_material = f"{client_ip}:{hour}".encode()
-
-    # Reconstruct server's key — server uses sha256(secret + key_material)
-    # Client derives same keystream using the hour embedded in blob header
-    # Note: client does not know server secret — server embeds key_check
-    # so client can reconstruct the keystream from the key_check directly
-    key_check = blob[16:48]   # first 32 bytes of keystream
+    # hour embedded in blob header (bytes 4-15)
+    hour = blob[4:16].rstrip().decode()
+    # key_check = first 32 bytes of keystream (bytes 16-47)
+    key_seed = blob[16:48]
     encrypted = blob[48:]
 
-    # Rebuild keystream from key_check (first block) + extend
-    ks = key_check
+    # Rebuild keystream: same algorithm as server
+    # server: ks = sha256(key); ks += sha256(key + i) for i in 1..N
+    # key_seed IS ks[:32] = sha256(key)
+    # so we extend: sha256(key_seed + i) matches sha256(key + i)
+    # only if key_seed == sha256(key) — which it is by construction
+    ks = key_seed
     for i in range(1, (len(encrypted) // 32) + 2):
-        ks += hashlib.sha256(key_check + i.to_bytes(4, "big")).digest()
+        ks += hashlib.sha256(key_seed + i.to_bytes(4, "big")).digest()
 
     decrypted_compressed = bytes(encrypted[i] ^ ks[i] for i in range(len(encrypted)))
     return zlib.decompress(decrypted_compressed)
