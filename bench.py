@@ -557,8 +557,6 @@ def main():
     print(json.dumps(r, default=str, indent=2))
 
     if _UPLOAD:
-        print("[bench] uploading results to telemetry collector...",
-              file=sys.stderr)
         _upload_results(r)
 
     print(f"[bench] done — score {r['score']['points']} ({r['score']['tier']})",
